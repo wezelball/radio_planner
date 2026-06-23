@@ -1,0 +1,6 @@
+# Radio Astronomy Observation Planner — dependencies
+astropy>=6.0
+numpy>=1.26
+matplotlib>=3.8
+astroquery>=0.4.7     # optional: live NVSS/SIMBAD queries
+scipy>=1.12           # optional: beam modeling extensions
