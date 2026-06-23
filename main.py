@@ -90,6 +90,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-flux", type=float, default=0.0,
                    help="Minimum source flux (Jy) to show")
 
+    # Beam pointing
+    p.add_argument("--beam-ra", type=float, default=None,
+                   help="Beam pointing RA (deg). Default: brightest visible source")
+    p.add_argument("--beam-dec", type=float, default=None,
+                   help="Beam pointing Dec (deg). Default: brightest visible source")
+    p.add_argument("--no-beam", action="store_true",
+                   help="Do not draw the beam footprint on the sky map")
+
     return p
 
 
@@ -163,9 +171,31 @@ def main(argv=None) -> None:
         sched = ObservationSchedule(site)
         sched.print_table(sources, start_time, args.duration)
 
+    # --- Beam target ---
+    from astropy.coordinates import SkyCoord
+    import astropy.units as u
+    beam_target = None
+    if not getattr(args, "no_beam", False):
+        if args.beam_ra is not None and args.beam_dec is not None:
+            beam_target = SkyCoord(ra=args.beam_ra * u.deg,
+                                   dec=args.beam_dec * u.deg, frame="icrs")
+            print(f"Beam pointing: RA={args.beam_ra:.2f}  Dec={args.beam_dec:+.2f}")
+        else:
+            # Default: brightest currently-visible source
+            from astropy.time import Time as _Time
+            frame = site.altaz_frame(start_time)
+            best, best_flux = None, -1
+            for src in sources:
+                altaz = src.coord.transform_to(frame)
+                if float(altaz.alt.deg) >= site.min_elevation and src.flux_jy > best_flux:
+                    best, best_flux = src, src.flux_jy
+            if best is not None:
+                beam_target = best.coord
+                print(f"Beam default -> {best.name}  RA={best.ra_deg:.2f}  Dec={best.dec_deg:+.2f}")
+
     # --- Sky map ---
     if not args.no_map:
-        smap = SkyMap(site, catalog, mode=args.mode)
+        smap = SkyMap(site, catalog, mode=args.mode, beam_target=beam_target)
         if args.save_map:
             smap.save(args.save_map, start_time)
             print(f"\nSky map saved to: {args.save_map}")
