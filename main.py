@@ -99,6 +99,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Hours of drift trail to draw on the sky map. Default: 24")
     p.add_argument("--no-beam", action="store_true",
                    help="Do not draw the beam footprint on the sky map")
+    p.add_argument("--no-background", action="store_true",
+                   help="Skip the GSM radio sky brightness background")
     p.add_argument("--no-transits", action="store_true",
                    help="Skip drift-scan beam transit predictions")
     p.add_argument("--min-response", type=float, default=0.0,
@@ -205,7 +207,8 @@ def main(argv=None) -> None:
         smap = SkyMap(site, catalog, mode=args.mode,
                       beam_az=beam_az, beam_el=beam_el,
                       drift_hours=args.drift_hours,
-                      transits=transits)
+                      transits=transits,
+                      show_background=not args.no_background)
         if args.save_map:
             smap.save(args.save_map, start_time)
             print(f"\nSky map saved to: {args.save_map}")

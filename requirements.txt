@@ -1,6 +1,14 @@
 # Radio Astronomy Observation Planner — dependencies
+
+# Core (required)
 astropy>=6.0
 numpy>=1.26
 matplotlib>=3.8
-astroquery>=0.4.7     # optional: live NVSS/SIMBAD queries
-scipy>=1.12           # optional: beam modeling extensions
+
+# Sky brightness background (required for GSM map)
+pygdsm>=1.4.0             # Global Sky Model — generates all-sky brightness maps
+healpy>=1.16.0            # HEALPix projection and pixel sampling
+
+# Optional
+astroquery>=0.4.7         # live NVSS/SIMBAD catalog queries
+scipy>=1.12               # beam modeling extensions

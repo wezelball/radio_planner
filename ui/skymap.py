@@ -86,16 +86,19 @@ class SkyMap:
         beam_el: Optional[float] = None,
         drift_hours: float = 24.0,
         transits: Optional[list] = None,
+        show_background: bool = True,
         figsize: Tuple[float, float] = (14, 7),
     ):
-        self.site        = site
-        self.catalog     = catalog
-        self.mode        = mode
-        self.beam_az     = beam_az
-        self.beam_el     = beam_el
-        self.drift_hours = drift_hours
-        self.transits    = transits or []   # List[BeamTransit]
-        self.figsize     = figsize
+        self.site            = site
+        self.catalog         = catalog
+        self.mode            = mode
+        self.beam_az         = beam_az
+        self.beam_el         = beam_el
+        self.drift_hours     = drift_hours
+        self.transits        = transits or []
+        self.show_background = show_background
+        self.figsize         = figsize
+        self._bg_cache: dict = {}   # keyed by freq_mhz -> np.ndarray
         self.fig: Optional[Figure] = None
         self.ax:  Optional[Axes]   = None
 
@@ -184,6 +187,9 @@ class SkyMap:
         for spine in ax.spines.values():
             spine.set_color(self.GRID_COLOR)
 
+        # Sky brightness background (drawn first, behind everything)
+        has_background = self._draw_sky_background(ax)
+
         # Straight RA grid lines every 30°
         for ra in range(0, 361, 30):
             ax.axvline(x=ra, color=self.GRID_COLOR, linewidth=0.5,
@@ -214,7 +220,9 @@ class SkyMap:
             ax.text(2, max_dec + 1, f"Max dec {max_dec:.0f}°",
                     color="#4A7A4A", fontsize=7, alpha=0.85)
 
-        self._draw_galactic_plane(ax)
+        # Galactic plane line: skip when background map is shown (plane visible in map)
+        if not has_background:
+            self._draw_galactic_plane(ax)
 
         if self.catalog:
             self._plot_sources(ax, time, show_visibility)
@@ -246,6 +254,75 @@ class SkyMap:
                             fontsize=7, color=style["color"],
                             xytext=(5, 3), textcoords="offset points",
                             alpha=0.9)
+
+    # ------------------------------------------------------------------
+    # Sky brightness background
+    # ------------------------------------------------------------------
+
+    def _draw_sky_background(self, ax: Axes) -> bool:
+        """
+        Render the Global Sky Model as a colour-mapped background image.
+        Returns True if the background was drawn, False if unavailable.
+        The image is cached after the first call so re-renders are fast.
+        """
+        if not self.show_background:
+            return False
+
+        # Use cached image if available
+        freq = self.site.frequency_mhz
+        if freq not in self._bg_cache:
+            print(f"  [skymap] Generating GSM background at {freq:.0f} MHz "
+                  f"(this takes ~10-20s) ... ", end="", flush=True)
+            img = build_gsm_background(freq)
+            if img is None:
+                print("pygdsm/healpy not installed — skipping background.")
+                print("  Install with: pip install pygdsm healpy")
+                return False
+            self._bg_cache[freq] = img
+            print(f"done  (peak {img.max():.0f} K, min {img.min():.0f} K)")
+
+        img = self._bg_cache[freq]
+
+        # Log-scale for dynamic range, then percentile-clip for contrast
+        img_log = np.log10(np.clip(img, 1.0, None))
+
+        # Clip to 2nd–99.5th percentile so the galactic centre doesn't
+        # swamp everything and the cold polar sky isn't pure black
+        vmin = float(np.percentile(img_log, 2.0))
+        vmax = float(np.percentile(img_log, 99.5))
+
+        ax.imshow(
+            img_log,
+            origin="lower",
+            extent=[0, 360, -90, 90],
+            aspect="auto",
+            cmap="inferno",
+            vmin=vmin,
+            vmax=vmax,
+            alpha=0.90,
+            zorder=0,
+            interpolation="bilinear",
+        )
+
+        # Colorbar with actual Kelvin tick labels
+        import matplotlib.cm as cm
+        import matplotlib.colors as mcolors
+        norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+        sm   = cm.ScalarMappable(cmap="inferno", norm=norm)
+        sm.set_array([])
+        cbar = self.fig.colorbar(sm, ax=ax, fraction=0.015, pad=0.01)
+        cbar.set_label("log₁₀ T_sky (K)", color=self.TEXT_COLOR, fontsize=8)
+        cbar.ax.yaxis.set_tick_params(color=self.TEXT_COLOR)
+        plt.setp(cbar.ax.yaxis.get_ticklabels(), color=self.TEXT_COLOR, fontsize=7)
+        # Annotate a few reference temperatures in Kelvin
+        import matplotlib.ticker as mticker
+        tick_k = [10, 30, 100, 300, 1000, 3000, 10000]
+        tick_log = [np.log10(k) for k in tick_k if vmin <= np.log10(k) <= vmax]
+        tick_labels = [f"{k}K" for k in tick_k if vmin <= np.log10(k) <= vmax]
+        cbar.set_ticks(tick_log)
+        cbar.set_ticklabels(tick_labels)
+        plt.setp(cbar.ax.yaxis.get_ticklabels(), color=self.TEXT_COLOR, fontsize=7)
+        return True
 
     # ------------------------------------------------------------------
     # Galactic plane
@@ -471,3 +548,78 @@ class SkyMap:
                 framealpha=0.3, labelcolor=self.TEXT_COLOR,
                 facecolor=self.DARK_BG, edgecolor=self.GRID_COLOR,
             )
+
+
+# ---------------------------------------------------------------------------
+# Sky background module (appended)
+# ---------------------------------------------------------------------------
+
+def build_gsm_background(freq_mhz: float = 1420.0,
+                          ra_pixels: int = 1440,
+                          dec_pixels: int = 720,
+                          nside: int = 512) -> Optional[np.ndarray]:
+    """
+    Generate a plate-carrée brightness temperature map from the Global Sky Model.
+
+    Parameters
+    ----------
+    freq_mhz   : observing frequency in MHz
+    ra_pixels  : number of pixels along RA axis (0–360°)
+    dec_pixels : number of pixels along Dec axis (-90–+90°)
+    nside      : HEALPix resolution (512 → ~0.11° per pixel, smooth result)
+
+    Returns
+    -------
+    2D numpy array of shape (dec_pixels, ra_pixels) in Kelvin,
+    or None if pygdsm / healpy are not installed.
+    """
+    try:
+        import healpy as hp
+        from pygdsm import GlobalSkyModel
+    except ImportError:
+        return None
+
+    # Generate the GSM map at the requested frequency.
+    # IMPORTANT: pygdsm returns the map in galactic coordinates (l, b),
+    # stored as a HEALPix RING-ordered array where phi=0 is the galactic
+    # centre, NOT RA=0.  We must convert each output pixel's RA/Dec to
+    # galactic (l, b) before indexing the map.
+    gsm = GlobalSkyModel()
+    gsm_map = gsm.generate(freq_mhz)   # HEALPix RING, galactic coords, Kelvin
+
+    # Upgrade/degrade to the requested nside
+    gsm_map = hp.ud_grade(gsm_map, nside, order_in='RING', order_out='RING')
+
+    # Build a regular RA/Dec pixel grid (plate carrée)
+    ra_grid  = np.linspace(0, 360, ra_pixels,  endpoint=False)   # deg
+    dec_grid = np.linspace(-90, 90, dec_pixels, endpoint=True)    # deg
+    ra_2d, dec_2d = np.meshgrid(ra_grid, dec_grid)
+
+    # Convert RA/Dec → galactic (l, b) via astropy — this is the key fix.
+    # Doing it in chunks avoids building a single enormous SkyCoord array.
+    from astropy.coordinates import SkyCoord, Galactic
+    import astropy.units as u_ap
+
+    chunk = 180   # process this many Dec rows at a time
+    l_2d  = np.empty_like(ra_2d)
+    b_2d  = np.empty_like(ra_2d)
+
+    for row_start in range(0, dec_pixels, chunk):
+        row_end = min(row_start + chunk, dec_pixels)
+        coords = SkyCoord(
+            ra=ra_2d[row_start:row_end].ravel() * u_ap.deg,
+            dec=dec_2d[row_start:row_end].ravel() * u_ap.deg,
+            frame='icrs',
+        ).galactic
+        l_2d[row_start:row_end] = coords.l.deg.reshape(row_end - row_start, ra_pixels)
+        b_2d[row_start:row_end] = coords.b.deg.reshape(row_end - row_start, ra_pixels)
+
+    # healpy convention: theta = colatitude (0=N pole), phi = longitude 0→2π
+    # galactic b runs -90→+90, galactic l runs 0→360
+    theta_gal = np.radians(90.0 - b_2d)   # colatitude from galactic b
+    phi_gal   = np.radians(l_2d)           # galactic longitude
+
+    pix   = hp.ang2pix(nside, theta_gal, phi_gal, nest=False)
+    image = gsm_map[pix]                   # shape: (dec_pixels, ra_pixels)
+
+    return image.reshape(dec_pixels, ra_pixels)
