@@ -101,6 +101,8 @@ class SkyMap:
         self._bg_cache: dict = {}   # keyed by freq_mhz -> np.ndarray
         self.fig: Optional[Figure] = None
         self.ax:  Optional[Axes]   = None
+        self._render_time: Optional[Time] = None
+        self._status_text = None       # matplotlib Text object for status bar
 
     # ------------------------------------------------------------------
     # Public API
@@ -108,15 +110,18 @@ class SkyMap:
 
     def render(self, time: Optional[Time] = None) -> Figure:
         t = time or Time.now()
+        self._render_time = t          # stored for mouse handler
         self.fig = plt.figure(figsize=self.figsize, facecolor=self.DARK_BG)
         self._render_radec(t, show_visibility=(self.mode == "altaz"))
         self._add_title(t)
         self._add_legend()
+        self._add_status_bar()
         plt.tight_layout()
         return self.fig
 
     def show(self, time: Optional[Time] = None) -> None:
         self.render(time)
+        self.fig.canvas.mpl_connect("motion_notify_event", self._on_mouse_move)
         plt.show()
 
     def save(self, path: str, time: Optional[Time] = None, dpi: int = 150) -> None:
@@ -519,6 +524,109 @@ class SkyMap:
                           edgecolor=color, alpha=0.65, linewidth=0.8),
             )
             first = False
+
+    # ------------------------------------------------------------------
+    # Interactive status bar
+    # ------------------------------------------------------------------
+
+    def _add_status_bar(self) -> None:
+        """Add a status bar text object along the bottom of the figure."""
+        self._status_text = self.fig.text(
+            0.01, 0.005,
+            "  Move cursor over map for coordinates",
+            color=self.TEXT_COLOR,
+            fontsize=10,
+            fontfamily="monospace",
+            va="bottom",
+            ha="left",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="black",
+                      edgecolor="#2D3748", alpha=0.75),
+        )
+
+    def _on_mouse_move(self, event) -> None:
+        """
+        Handle mouse movement over the axes.
+        Converts RA/Dec cursor position to Az/El at the render time,
+        computes time to next meridian transit, and finds the nearest
+        catalog source within 5°.
+        """
+        if event.inaxes is not self.ax or self._render_time is None:
+            return
+        if event.xdata is None or event.ydata is None:
+            return
+
+        ra_deg  = float(event.xdata)
+        dec_deg = float(event.ydata)
+        t       = self._render_time
+
+        # RA/Dec → Az/El
+        coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg, frame="icrs")
+        altaz_frame = AltAz(obstime=t, location=self.site.location)
+        altaz = coord.transform_to(altaz_frame)
+        az_deg = float(altaz.az.deg)
+        el_deg = float(altaz.alt.deg)
+
+        # Time to next meridian transit
+        # Transit occurs when HA = 0, i.e. LST = RA
+        lst_deg = float(t.sidereal_time("apparent", self.site.location).deg)
+        ha_deg  = (lst_deg - ra_deg) % 360.0   # current hour angle (0–360)
+        # Time until transit: how many degrees until HA wraps to 0
+        # Earth rotates 360° in one sidereal day (23h 56m 4s = 86164.1s)
+        sidereal_day_s = 86164.1
+        if ha_deg <= 180:
+            # Source is west of meridian (already transited); next transit is
+            # 360 - ha_deg degrees away
+            deg_to_transit = 360.0 - ha_deg
+        else:
+            # Source is east of meridian; ha_deg - 360 is negative HA,
+            # transit is |360 - ha_deg| = ha_deg - 360... wait:
+            # HA > 180 means source hasn't transited yet (rising side)
+            deg_to_transit = 360.0 - ha_deg
+        sec_to_transit  = deg_to_transit / 360.0 * sidereal_day_s
+        h   = int(sec_to_transit // 3600)
+        m   = int((sec_to_transit % 3600) // 60)
+        s   = int(sec_to_transit % 60)
+        transit_str = f"{h:02d}h {m:02d}m {s:02d}s"
+
+        # Nearest catalog source
+        nearest_str = ""
+        if self.catalog:
+            coords_list = [(src, src.coord.separation(coord).deg)
+                           for src in self.catalog]
+            coords_list.sort(key=lambda x: x[1])
+            nearest_src, nearest_sep = coords_list[0]
+            if nearest_sep < 15.0:
+                nearest_str = (f"   |   Nearest: {nearest_src.name} "
+                               f"({nearest_sep:.1f}° away)")
+
+        # Horizon status
+        horizon_str = "ABOVE" if el_deg >= self.site.min_elevation else "below"
+
+        # Elevation and azimuth at meridian transit
+        # At transit HA=0: El = 90° - |Dec - Lat|, clamped to [-90, 90]
+        # Az = 180° (south) for Dec < Lat; Az = 0° (north) for Dec > Lat
+        el_at_transit = 90.0 - abs(dec_deg - self.site.latitude)
+        el_at_transit = max(-90.0, min(90.0, el_at_transit))
+        transit_az = 0.0 if dec_deg > self.site.latitude else 180.0
+        transit_visible = el_at_transit >= self.site.min_elevation
+        transit_vis_str = "visible" if transit_visible else "below limit"
+
+        # UTC time of next transit
+        transit_utc = t + (sec_to_transit * u.second)
+        transit_utc_str = transit_utc.iso[11:16]   # HH:MM
+
+        status = (
+            f"  RA={ra_deg:6.2f}°  Dec={dec_deg:+6.2f}°"
+            f"   |   Az={az_deg:6.2f}°  El={el_deg:+6.2f}°  [{horizon_str}]"
+            f"   |   Transit in: {transit_str}"
+            f"   |   Transit UTC: {transit_utc_str}"
+            f"   |   El at transit: {el_at_transit:+.1f}°  Az={transit_az:.0f}°  [{transit_vis_str}]"
+            f"{nearest_str}"
+        )
+
+        if self._status_text is not None:
+            self._status_text.set_text(status)
+            self.fig.canvas.draw_idle()   # lightweight redraw — no recomputation
 
     # ------------------------------------------------------------------
     # Decorations
