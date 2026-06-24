@@ -85,6 +85,7 @@ class SkyMap:
         beam_az: Optional[float] = None,
         beam_el: Optional[float] = None,
         drift_hours: float = 24.0,
+        transits: Optional[list] = None,
         figsize: Tuple[float, float] = (14, 7),
     ):
         self.site        = site
@@ -93,6 +94,7 @@ class SkyMap:
         self.beam_az     = beam_az
         self.beam_el     = beam_el
         self.drift_hours = drift_hours
+        self.transits    = transits or []   # List[BeamTransit]
         self.figsize     = figsize
         self.fig: Optional[Figure] = None
         self.ax:  Optional[Axes]   = None
@@ -366,6 +368,55 @@ class SkyMap:
                 color=self.BEAM_COLOR, fontsize=7,
                 va="center", alpha=0.9, zorder=7)
 
+        # Transit markers
+        self._draw_transit_markers(ax, time)
+
+    # ------------------------------------------------------------------
+    # Transit markers
+    # ------------------------------------------------------------------
+
+    def _draw_transit_markers(self, ax: Axes, time: Time) -> None:
+        """
+        Mark each BeamTransit's peak position on the drift trail.
+        Converts the peak_time Az/El to RA/Dec and plots a labelled dot.
+        """
+        if not self.transits or self.beam_az is None or self.beam_el is None:
+            return
+
+        first = True
+        for t in self.transits:
+            if t.peak_time is None:
+                continue
+
+            # RA/Dec of beam centre at peak crossing time
+            centre = self._altaz_to_radec(self.beam_az, self.beam_el, t.peak_time)
+            ra_m  = float(centre.ra.deg)
+            dec_m = float(centre.dec.deg)
+
+            # Colour by response: bright green for strong, yellow for weak
+            color = "#00FF88" if t.is_detected() else "#FFD700"
+            size  = 60 if t.is_detected() else 35
+
+            ax.scatter([ra_m], [dec_m], c=color, s=size,
+                       zorder=9, edgecolors="white", linewidths=0.5,
+                       label="Transit (≥50% beam)" if (first and t.is_detected())
+                             else ("Transit (<50% beam)" if (first and not t.is_detected())
+                                   else "_nolegend_"))
+
+            # Label: source name + peak UTC time
+            peak_str = t.peak_time.iso[11:16]   # HH:MM
+            cos_dec  = max(abs(np.cos(np.radians(dec_m))), 0.01)
+            offset_ra = self.site.beam_fwhm_deg * 0.4 / cos_dec
+            ax.annotate(
+                f"{t.source_name}\n{peak_str} UTC\n"
+                f"resp={t.peak_response:.2f} dur={t.transit_duration_min:.1f}m",
+                (ra_m, dec_m),
+                xytext=(ra_m + offset_ra, dec_m + self.site.beam_fwhm_deg * 0.35),
+                fontsize=6.5, color=color, alpha=0.95, zorder=10,
+                arrowprops=dict(arrowstyle="-", color=color, alpha=0.5, lw=0.8),
+            )
+            first = False
+
     # ------------------------------------------------------------------
     # Decorations
     # ------------------------------------------------------------------
@@ -407,6 +458,12 @@ class SkyMap:
                 color=self.BEAM_COLOR, alpha=0.4,
                 label=f"Drift trail ({self.drift_hours:.0f}h)"
             ))
+        if any(t.is_detected() for t in self.transits):
+            handles.append(mpatches.Patch(color="#00FF88", alpha=0.9,
+                                          label="Transit ≥50% beam"))
+        if any(not t.is_detected() for t in self.transits):
+            handles.append(mpatches.Patch(color="#FFD700", alpha=0.9,
+                                          label="Transit <50% beam"))
 
         if handles:
             self.ax.legend(

@@ -27,7 +27,7 @@ from astropy.time import Time
 
 from core.observer import ObserverSite, KNOWN_SITES, now_utc
 from core.catalog import default_catalog, RadioCatalog
-from core.ephemeris import Ephemeris
+from core.ephemeris import Ephemeris, DriftScanPredictor, BeamTransit
 from ui.skymap import SkyMap
 from ui.planner import ElevationPlot, ObservationSchedule, SensitivityCalculator
 
@@ -99,6 +99,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Hours of drift trail to draw on the sky map. Default: 24")
     p.add_argument("--no-beam", action="store_true",
                    help="Do not draw the beam footprint on the sky map")
+    p.add_argument("--no-transits", action="store_true",
+                   help="Skip drift-scan beam transit predictions")
+    p.add_argument("--min-response", type=float, default=0.0,
+                   help="Only show transits with beam response >= this value (0-1)")
 
     return p
 
@@ -177,6 +181,17 @@ def main(argv=None) -> None:
         sched = ObservationSchedule(site)
         sched.print_table(sources, start_time, args.duration)
 
+    # --- Drift-scan transit predictions ---
+    transits = []
+    if not args.no_transits and not args.no_beam:
+        predictor = DriftScanPredictor(site, beam_az=args.beam_az,
+                                       beam_el=args.beam_el)
+        transits = predictor.print_transits(
+            sources, start_time,
+            duration_hours=args.drift_hours,
+            min_response=args.min_response,
+        )
+
     # --- Beam (drift scan: fixed Az/El) ---
     beam_az = beam_el = None
     if not getattr(args, "no_beam", False):
@@ -189,7 +204,8 @@ def main(argv=None) -> None:
     if not args.no_map:
         smap = SkyMap(site, catalog, mode=args.mode,
                       beam_az=beam_az, beam_el=beam_el,
-                      drift_hours=args.drift_hours)
+                      drift_hours=args.drift_hours,
+                      transits=transits)
         if args.save_map:
             smap.save(args.save_map, start_time)
             print(f"\nSky map saved to: {args.save_map}")
