@@ -86,6 +86,7 @@ KNOWN_SITES = {
     "parkes": ObserverSite("Parkes", -32.9983, 148.2635, 415),
     "arecibo": ObserverSite("Arecibo", 18.3464, -66.7528, 497),
     "effelsberg": ObserverSite("Effelsberg", 50.5247, 6.8828, 369),
+    "twomice": ObserverSite(name="TwoMice", latitude=37.7906, longitude=-77.9242, elevation=116, min_elevation=30.0, dish_diameter=0.7, system_temp_k=150.0),
     "custom": ObserverSite("Custom Site", 0.0, 0.0, 0),
 }
 

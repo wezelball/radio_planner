@@ -113,11 +113,15 @@ def main(argv=None) -> None:
 
     # --- Build site ---
     if args.site:
-        site = KNOWN_SITES[args.site]
-        site.frequency_mhz = args.freq
-        site.dish_diameter = args.dish
-        site.system_temp_k = args.tsys
-        site.min_elevation = args.min_el
+        import copy
+        site = copy.copy(KNOWN_SITES[args.site])
+        # Only apply CLI flags when the user explicitly passed them
+        explicitly_set = {a.dest for a in parser._actions if a.default is not None
+                          and getattr(args, a.dest, None) != a.default}
+        if "freq"   in explicitly_set: site.frequency_mhz = args.freq
+        if "dish"   in explicitly_set: site.dish_diameter = args.dish
+        if "tsys"   in explicitly_set: site.system_temp_k = args.tsys
+        if "min_el" in explicitly_set: site.min_elevation = args.min_el
     else:
         site = ObserverSite(
             name=args.name,
