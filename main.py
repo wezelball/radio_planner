@@ -90,11 +90,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-flux", type=float, default=0.0,
                    help="Minimum source flux (Jy) to show")
 
-    # Beam pointing
-    p.add_argument("--beam-ra", type=float, default=None,
-                   help="Beam pointing RA (deg). Default: brightest visible source")
-    p.add_argument("--beam-dec", type=float, default=None,
-                   help="Beam pointing Dec (deg). Default: brightest visible source")
+    # Beam pointing (drift scan — fixed Az/El)
+    p.add_argument("--beam-az", type=float, default=180.0,
+                   help="Dish azimuth (deg, 0=N 90=E). Default: 180 (South)")
+    p.add_argument("--beam-el", type=float, default=45.0,
+                   help="Dish elevation (deg above horizon). Default: 45")
+    p.add_argument("--drift-hours", type=float, default=24.0,
+                   help="Hours of drift trail to draw on the sky map. Default: 24")
     p.add_argument("--no-beam", action="store_true",
                    help="Do not draw the beam footprint on the sky map")
 
@@ -171,31 +173,19 @@ def main(argv=None) -> None:
         sched = ObservationSchedule(site)
         sched.print_table(sources, start_time, args.duration)
 
-    # --- Beam target ---
-    from astropy.coordinates import SkyCoord
-    import astropy.units as u
-    beam_target = None
+    # --- Beam (drift scan: fixed Az/El) ---
+    beam_az = beam_el = None
     if not getattr(args, "no_beam", False):
-        if args.beam_ra is not None and args.beam_dec is not None:
-            beam_target = SkyCoord(ra=args.beam_ra * u.deg,
-                                   dec=args.beam_dec * u.deg, frame="icrs")
-            print(f"Beam pointing: RA={args.beam_ra:.2f}  Dec={args.beam_dec:+.2f}")
-        else:
-            # Default: brightest currently-visible source
-            from astropy.time import Time as _Time
-            frame = site.altaz_frame(start_time)
-            best, best_flux = None, -1
-            for src in sources:
-                altaz = src.coord.transform_to(frame)
-                if float(altaz.alt.deg) >= site.min_elevation and src.flux_jy > best_flux:
-                    best, best_flux = src, src.flux_jy
-            if best is not None:
-                beam_target = best.coord
-                print(f"Beam default -> {best.name}  RA={best.ra_deg:.2f}  Dec={best.dec_deg:+.2f}")
+        beam_az = args.beam_az
+        beam_el = args.beam_el
+        print(f"Dish pointing: Az={beam_az:.1f}°  El={beam_el:.1f}°  "
+              f"(drift scan, FWHM={site.beam_fwhm_deg:.2f}°)")
 
     # --- Sky map ---
     if not args.no_map:
-        smap = SkyMap(site, catalog, mode=args.mode, beam_target=beam_target)
+        smap = SkyMap(site, catalog, mode=args.mode,
+                      beam_az=beam_az, beam_el=beam_el,
+                      drift_hours=args.drift_hours)
         if args.save_map:
             smap.save(args.save_map, start_time)
             print(f"\nSky map saved to: {args.save_map}")

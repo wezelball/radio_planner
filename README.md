@@ -32,7 +32,7 @@ pip install astroquery
 source .venv/bin/activate
 
 ```bash
-# Run with defaults (Green Bank site, current time)
+# Run with defaults (Green Bank site, current time, South-facing dish at 45° elevation)
 python main.py --site green_bank
 
 # Custom site with equatorial sky map
@@ -49,6 +49,15 @@ python main.py --catalog my_sources.csv --min-flux 10
 
 # Schedule only, no plots
 python main.py --site parkes --no-map --no-elev
+
+# Point east at 30° elevation
+python3 main.py --site green_bank --beam-az 90 --beam-el 30
+
+# Show only the next 6 hours of drift
+python3 main.py --site green_bank --beam-az 180 --beam-el 60 --drift-hours 6
+
+# No beam overlay
+python3 main.py --site green_bank --no-beam
 ```
 
 ---
