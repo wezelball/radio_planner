@@ -34,16 +34,16 @@ from core.catalog import RadioCatalog
 # ---------------------------------------------------------------------------
 
 SOURCE_STYLES = {
-    "supernova remnant": dict(color="#FF6B6B", marker="*",  size=14),
-    "radio galaxy":      dict(color="#4ECDC4", marker="D",  size=10),
-    "galactic center":   dict(color="#FFE66D", marker="X",  size=14),
-    "hii region":        dict(color="#A8E6CF", marker="^",  size=10),
-    "pulsar":            dict(color="#FF8B94", marker="p",  size=12),
-    "galaxy":            dict(color="#C3A6FF", marker="o",  size=9),
-    "solar":             dict(color="#FFD700", marker="o",  size=18),
-    "continuum":         dict(color="#FFFFFF", marker="o",  size=8),
-    "galactic":          dict(color="#98D8C8", marker="s",  size=8),
-    "default":           dict(color="#AAAAAA", marker="o",  size=7),
+    "supernova remnant": dict(color="#FF2222", marker="*",  size=18),
+    "radio galaxy":      dict(color="#00FFFF", marker="D",  size=13),
+    "galactic center":   dict(color="#FFFF00", marker="X",  size=18),
+    "hii region":        dict(color="#00FF88", marker="^",  size=13),
+    "pulsar":            dict(color="#FF44FF", marker="p",  size=15),
+    "galaxy":            dict(color="#CC99FF", marker="o",  size=12),
+    "solar":             dict(color="#FFD700", marker="o",  size=22),
+    "continuum":         dict(color="#FFFFFF", marker="o",  size=12),
+    "galactic":          dict(color="#44FFDD", marker="s",  size=12),
+    "default":           dict(color="#DDDDDD", marker="o",  size=11),
 }
 
 def _source_style(source_type: str) -> dict:
@@ -241,19 +241,41 @@ class SkyMap:
             above = el >= self.site.min_elevation
             style = _source_style(src.source_type)
 
-            alpha = (1.0  if above else 0.20) if show_visibility else 0.9
-            fc    = (style["color"] if above else "#3A3A4A") if show_visibility else style["color"]
+            # Markers: full brightness if above horizon, dimmed if below
+            marker_alpha = (1.0 if above else 0.25) if show_visibility else 0.9
+            fc = (style["color"] if above else "#3A3A4A") if show_visibility else style["color"]
 
+            # White halo behind marker for contrast against bright background
+            ax.scatter(src.ra_deg, src.dec_deg,
+                       c="white", marker=style["marker"],
+                       s=(style["size"] + 4) ** 2, alpha=marker_alpha * 0.6,
+                       zorder=3, edgecolors="none")
             ax.scatter(src.ra_deg, src.dec_deg,
                        c=fc, marker=style["marker"],
-                       s=style["size"] ** 2, alpha=alpha,
-                       zorder=3, edgecolors="none")
+                       s=style["size"] ** 2, alpha=marker_alpha,
+                       zorder=4, edgecolors="none")
 
-            if not show_visibility or above:
-                ax.annotate(src.name, (src.ra_deg, src.dec_deg),
-                            fontsize=7, color=style["color"],
-                            xytext=(5, 3), textcoords="offset points",
-                            alpha=0.9)
+            # Labels: always shown for all sources; dimmed text for below-horizon
+            text_alpha = (1.0 if above else 0.45) if show_visibility else 1.0
+            text_color = style["color"] if above or not show_visibility else "#888888"
+
+            ax.annotate(
+                src.name,
+                (src.ra_deg, src.dec_deg),
+                fontsize=9,
+                fontweight="bold",
+                color=text_color,
+                xytext=(6, 4),
+                textcoords="offset points",
+                alpha=text_alpha,
+                zorder=6,
+                bbox=dict(
+                    boxstyle="round,pad=0.15",
+                    facecolor="black",
+                    edgecolor="none",
+                    alpha=0.55 * text_alpha,
+                ),
+            )
 
     # ------------------------------------------------------------------
     # Sky brightness background
@@ -509,7 +531,7 @@ class SkyMap:
             f"{self.site.frequency_mhz:.1f} MHz  |  Dish={self.site.dish_diameter:.1f} m"
             f"{beam_str}"
         )
-        self.fig.suptitle(title, color=self.TEXT_COLOR, fontsize=8,
+        self.fig.suptitle(title, color="#FFFFFF", fontsize=10, fontweight="bold",
                           y=0.99, fontfamily="monospace")
 
     def _add_legend(self) -> None:
