@@ -464,8 +464,10 @@ class SkyMap:
                 f" Az={az:.1f}°  El={el:.1f}°\n"
                 f" RA={ra_c:.1f}°  Dec={dec_c:+.1f}°\n"
                 f" FWHM={fwhm:.2f}°",
-                color=self.BEAM_COLOR, fontsize=7,
-                va="center", alpha=0.9, zorder=7)
+                color=self.BEAM_COLOR, fontsize=11, fontweight="bold",
+                va="center", alpha=0.95, zorder=7,
+                bbox=dict(boxstyle="round,pad=0.25", facecolor="black",
+                          edgecolor=self.BEAM_COLOR, alpha=0.6, linewidth=0.8))
 
         # Transit markers
         self._draw_transit_markers(ax, time)
@@ -508,11 +510,13 @@ class SkyMap:
             offset_ra = self.site.beam_fwhm_deg * 0.4 / cos_dec
             ax.annotate(
                 f"{t.source_name}\n{peak_str} UTC\n"
-                f"resp={t.peak_response:.2f} dur={t.transit_duration_min:.1f}m",
+                f"resp={t.peak_response:.2f}  dur={t.transit_duration_min:.1f}m",
                 (ra_m, dec_m),
                 xytext=(ra_m + offset_ra, dec_m + self.site.beam_fwhm_deg * 0.35),
-                fontsize=6.5, color=color, alpha=0.95, zorder=10,
-                arrowprops=dict(arrowstyle="-", color=color, alpha=0.5, lw=0.8),
+                fontsize=11, fontweight="bold", color=color, alpha=0.95, zorder=10,
+                arrowprops=dict(arrowstyle="-", color=color, alpha=0.6, lw=1.0),
+                bbox=dict(boxstyle="round,pad=0.25", facecolor="black",
+                          edgecolor=color, alpha=0.65, linewidth=0.8),
             )
             first = False
 
