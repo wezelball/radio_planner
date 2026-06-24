@@ -147,29 +147,24 @@ class SkyMap:
                              time: Time, n: int = 360,
                              ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Sample the FWHM beam circle (in Az/El) and convert each point
-        to RA/Dec at the given instant, giving the true beam footprint
-        on the sky.
+        Sample the FWHM beam circle on the sky and return it in RA/Dec.
+
+        Uses SkyCoord.directional_offset_by() to walk great-circle offsets
+        of radius = FWHM/2 around the beam centre at evenly-spaced position
+        angles.  This is geometrically exact — no flat-sky approximation —
+        so the boundary is always a clean closed ellipse on the sky regardless
+        of elevation or proximity to the poles.
         """
-        fwhm  = self.site.beam_fwhm_deg
-        r     = fwhm / 2.0
-        theta = np.linspace(0, 2 * np.pi, n, endpoint=False)
+        fwhm   = self.site.beam_fwhm_deg
+        radius = (fwhm / 2.0) * u.deg
 
-        # Offset azimuths and elevations around the beam centre.
-        # Az offset is stretched by 1/cos(el) so the circle is correct on sky.
-        cos_el = np.cos(np.radians(el_deg))
-        if abs(cos_el) < 0.01:
-            cos_el = 0.01
-        az_offsets  = az_deg  + r / cos_el * np.cos(theta)
-        el_offsets  = el_deg  + r           * np.sin(theta)
+        # Convert the fixed Az/El pointing to RA/Dec at this instant
+        centre = self._altaz_to_radec(az_deg, el_deg, time)
 
-        # Clip elevations to physical range
-        el_offsets = np.clip(el_offsets, -89.9, 89.9)
-
-        altaz_frame = AltAz(obstime=time, location=self.site.location)
-        coords = SkyCoord(az=az_offsets * u.deg, alt=el_offsets * u.deg,
-                          frame=altaz_frame).icrs
-        return coords.ra.deg, coords.dec.deg
+        # Sample position angles 0→360° and step one FWHM/2 radius along each
+        position_angles = np.linspace(0, 360, n, endpoint=False) * u.deg
+        boundary = centre.directional_offset_by(position_angles, radius)
+        return boundary.ra.deg, boundary.dec.deg
 
     # ------------------------------------------------------------------
     # Core rectangular RA/Dec renderer
