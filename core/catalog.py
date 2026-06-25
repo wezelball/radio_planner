@@ -54,22 +54,18 @@ class RadioSource:
 # ---------------------------------------------------------------------------
 
 BRIGHT_SOURCES: List[RadioSource] = [
-    RadioSource("Cas A",       350.8667,  58.8117, 2720.0, 1000, -0.77, "supernova remnant"),
-    RadioSource("Cyg A",       299.8672,  40.7339, 1590.0, 1000, -1.00, "radio galaxy"),
-    RadioSource("Tau A (Crab)",  83.8221,  22.0144,  955.0, 1000, -0.30, "supernova remnant"),
-    RadioSource("Vir A (M87)", 187.7059,  12.3911,  861.0, 1000, -0.86, "radio galaxy"),
-    RadioSource("Sgr A*",      266.4168, -29.0078,  370.0,  10e3, -0.60, "galactic center"),
-    RadioSource("3C 123",       69.2683,  29.6706,   48.0, 1000, -0.85, "radio galaxy"),
-    RadioSource("3C 144",       83.6321,  22.0145,  955.0, 1000, -0.30, "supernova remnant"),
-    RadioSource("3C 218 (Hydra A)", 139.5237, -12.0956, 40.0, 1000, -0.91, "radio galaxy"),
-    RadioSource("3C 274 (Vir A)", 187.7059, 12.3911, 861.0, 1000, -0.86, "radio galaxy"),
-    RadioSource("3C 405 (Cyg A)", 299.8672, 40.7339, 1590.0, 1000, -1.00, "radio galaxy"),
-    RadioSource("3C 461 (Cas A)", 350.8667, 58.8117, 2720.0, 1000, -0.77, "supernova remnant"),
-    RadioSource("Sun",           0.0,      0.0,   1e6,  1e3,  2.0,  "solar"),  # coords updated at runtime
-    RadioSource("Galactic Plane Center", 266.4, -29.0, 500.0, 1000, -0.7, "galactic"),
-    RadioSource("Orion A",        83.8221, -5.3911,  50.0, 1000, -0.1, "hii region"),
-    RadioSource("W3",             35.5833, 61.9,     30.0, 1000, -0.5, "hii region"),
-    RadioSource("Puppis A",      125.7143, -42.9983, 60.0, 1000, -0.5, "supernova remnant"),
+    RadioSource("3C 461 (Cas A)",     350.8667,  58.8117, 2720.0, 1000, -0.77, "supernova remnant"),
+    RadioSource("3C 405 (Cyg A)",     299.8672,  40.7339, 1590.0, 1000, -1.00, "radio galaxy"),
+    RadioSource("3C 144 (Tau A)",      83.8221,  22.0144,  955.0, 1000, -0.30, "supernova remnant"),
+    RadioSource("3C 274 (Vir A/M87)", 187.7059,  12.3911,  861.0, 1000, -0.86, "radio galaxy"),
+    RadioSource("Sgr A*",             266.4168, -29.0078,  370.0,  10e3, -0.60, "galactic center"),
+    RadioSource("3C 123",              69.2683,  29.6706,   48.0, 1000, -0.85, "radio galaxy"),
+    RadioSource("3C 218 (Hydra A)",   139.5237, -12.0956,   40.0, 1000, -0.91, "radio galaxy"),
+    RadioSource("Sun",                  0.0,      0.0,      1e6,   1e3,  2.0,  "solar"),  # coords updated at runtime
+    RadioSource("Galactic Plane Center", 266.4, -29.0,     500.0, 1000, -0.7,  "galactic"),
+    RadioSource("Orion A",             83.8221,  -5.3911,   50.0, 1000, -0.1,  "hii region"),
+    RadioSource("W3",                  35.5833,  61.9,      30.0, 1000, -0.5,  "hii region"),
+    RadioSource("Puppis A",           125.7143, -42.9983,   60.0, 1000, -0.5,  "supernova remnant"),
 ]
 
 
