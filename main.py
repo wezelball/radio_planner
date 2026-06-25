@@ -33,6 +33,44 @@ from ui.planner import ElevationPlot, ObservationSchedule, SensitivityCalculator
 
 
 # ---------------------------------------------------------------------------
+# Tee: write to stdout and a file simultaneously
+# ---------------------------------------------------------------------------
+
+class _Tee:
+    """Mirrors stdout to a file, excluding render/plot status lines."""
+
+    EXCLUDE = (
+        "Rendering sky map",
+        "Rendering elevation plot",
+        "[skymap] Generating GSM",
+    )
+
+    def __init__(self, filepath: str):
+        self._stdout = sys.stdout
+        self._file   = open(filepath, "w", encoding="utf-8")
+        self._buf    = ""
+        sys.stdout   = self
+
+    def write(self, text: str) -> None:
+        self._stdout.write(text)
+        self._buf += text
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            if not any(ex in line for ex in self.EXCLUDE):
+                self._file.write(line + "\n")
+
+    def flush(self) -> None:
+        self._stdout.flush()
+        self._file.flush()
+
+    def close(self) -> None:
+        if self._buf and not any(ex in self._buf for ex in self.EXCLUDE):
+            self._file.write(self._buf + "\n")
+        self._file.close()
+        sys.stdout = self._stdout
+
+
+# ---------------------------------------------------------------------------
 # CLI argument parser
 # ---------------------------------------------------------------------------
 
@@ -105,6 +143,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Skip drift-scan beam transit predictions")
     p.add_argument("--min-response", type=float, default=0.0,
                    help="Only show transits with beam response >= this value (0-1)")
+    p.add_argument("--report", type=str, default=None, metavar="FILE",
+                   help="Save text report to FILE (e.g. --report session.txt)")
 
     return p
 
@@ -116,6 +156,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    # --- Report file ---
+    tee = None
+    if args.report:
+        tee = _Tee(args.report)
+        print(f"# Observation Report")
+        print(f"# Generated: {__import__('datetime').datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC")
+        print(f"# Command:   {' '.join(__import__('sys').argv)}\n")
 
     # --- Build site ---
     if args.site:
@@ -227,6 +275,11 @@ def main(argv=None) -> None:
             elev_plot.show(sources, start_time, args.duration)
 
     print("\nDone.")
+
+    if tee is not None:
+        tee.close()
+        # final message goes direct to real stdout
+        tee._stdout.write(f"Report saved to: {args.report}\n")
 
 
 if __name__ == "__main__":
