@@ -1,6 +1,6 @@
 # Observation Report
-# Generated: 2026-06-25 01:59 UTC
-# Command:   main.py --site twomice --beam-az 180 --beam-el 90 --drift-hours 6 --time 2026-06-25 04:00:00 --no-elev --report obsreport.txt
+# Generated: 2026-06-25 02:20 UTC
+# Command:   main.py --site twomice --beam-az 180 --beam-el 90 --drift-hours 6 --time 2026-06-25 04:00:00 --no-elev --integration 20 --report obsreport.txt --save-map test_map
 
 
 ============================================================
@@ -25,13 +25,10 @@ Using built-in bright source catalog: 16 sources
   SEFD         : 1792929 Jy
   Beam FWHP    : 21.10°  (1265.8')
 
-  Bandwidth    : 10.0 MHz
-  Integration  : 300 s
-  1σ RMS       : 23146.616 mJy
-  5σ limit     : 115733.079 mJy
-
-  To detect 50.0 mJy at 5σ:
-  Required tint: 64291899.1 s  (1071531.7 min)
+  Receiver bandwidth  : 1.000 MHz  (noise bandwidth of receiver/filter)
+  Integration time    : 20 s  (samples averaged per measurement)
+  1σ RMS noise        : 283486.991 mJy
+  5σ detection limit  : 1417434.953 mJy
 ============================
 
 Observation Schedule — TwoMice
@@ -73,5 +70,6 @@ Puppis A               (never rises)      ---                ---                
 
 Dish pointing: Az=180.0°  El=90.0°  (drift scan, FWHM=21.10°)
 
+Sky map saved to: test_map
 
 Done.

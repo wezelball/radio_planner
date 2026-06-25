@@ -102,6 +102,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tsys", type=float, default=100.0,
                    help="System temperature (K)")
 
+    # Receiver / sensitivity
+    p.add_argument("--bandwidth", type=float, default=1.0,
+                   help="Receiver noise bandwidth (MHz). "
+                        "Use ~1-2 MHz for HI spectral line, 10+ MHz for continuum")
+    p.add_argument("--integration", type=float, default=60.0,
+                   help="Software integration time per sample (seconds). "
+                        "Longer = lower noise floor")
+    p.add_argument("--target-snr", type=float, default=5.0,
+                   help="Target signal-to-noise ratio for sensitivity calculation")
+    p.add_argument("--target-flux", type=float, default=None,
+                   help="Check detectability of a specific source flux (mJy). "
+                        "Optional — omit to skip")
+
     # Time
     p.add_argument("--time", type=str, default=None,
                    help="Start time ISO UTC (e.g. '2024-06-01 22:00:00'). Default: now")
@@ -223,8 +236,10 @@ def main(argv=None) -> None:
 
     # --- Sensitivity report ---
     calc = SensitivityCalculator(site)
-    calc.print_report(bandwidth_mhz=10.0, integration_s=300.0,
-                      target_snr=5.0, target_flux_mjy=50.0)
+    calc.print_report(bandwidth_mhz=args.bandwidth,
+                      integration_s=args.integration,
+                      target_snr=args.target_snr,
+                      target_flux_mjy=args.target_flux)
 
     # --- Schedule table ---
     if not args.no_schedule:

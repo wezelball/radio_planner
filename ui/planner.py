@@ -203,10 +203,10 @@ class SensitivityCalculator:
             f"  SEFD         : {sefd:.0f} Jy",
             f"  Beam FWHP    : {beam:.2f}°  ({beam * 60:.1f}')",
             "",
-            f"  Bandwidth    : {bandwidth_mhz:.1f} MHz",
-            f"  Integration  : {integration_s:.0f} s",
-            f"  1σ RMS       : {rms:.3f} mJy",
-            f"  {target_snr:.0f}σ limit     : {target_snr * rms:.3f} mJy",
+            f"  Receiver bandwidth  : {bandwidth_mhz:.3f} MHz  (noise bandwidth of receiver/filter)",
+            f"  Integration time    : {integration_s:.0f} s  (samples averaged per measurement)",
+            f"  1σ RMS noise        : {rms:.3f} mJy",
+            f"  {target_snr:.0f}σ detection limit  : {target_snr * rms:.3f} mJy",
         ]
 
         if target_flux_mjy is not None:
