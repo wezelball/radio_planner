@@ -61,8 +61,7 @@ BRIGHT_SOURCES: List[RadioSource] = [
     RadioSource("Sgr A*",             266.4168, -29.0078,  370.0,  10e3, -0.60, "galactic center"),
     RadioSource("3C 123",              69.2683,  29.6706,   48.0, 1000, -0.85, "radio galaxy"),
     RadioSource("3C 218 (Hydra A)",   139.5237, -12.0956,   40.0, 1000, -0.91, "radio galaxy"),
-    RadioSource("Sun",                  0.0,      0.0,      1e6,   1e3,  2.0,  "solar"),  # coords updated at runtime
-    RadioSource("Galactic Plane Center", 266.4, -29.0,     500.0, 1000, -0.7,  "galactic"),
+    RadioSource("Sun",                  0.0,      0.0,      1e6,   1e3,  2.0,  "solar"),  # coords set at runtime via get_sun()
     RadioSource("Orion A",             83.8221,  -5.3911,   50.0, 1000, -0.1,  "hii region"),
     RadioSource("W3",                  35.5833,  61.9,      30.0, 1000, -0.5,  "hii region"),
     RadioSource("Puppis A",           125.7143, -42.9983,   60.0, 1000, -0.5,  "supernova remnant"),
@@ -194,5 +193,32 @@ def query_nvss(ra_deg: float, dec_deg: float, radius_deg: float = 1.0,
 # Default catalog singleton
 # ---------------------------------------------------------------------------
 
-def default_catalog() -> RadioCatalog:
-    return RadioCatalog("Bright Sources", list(BRIGHT_SOURCES))
+def default_catalog(time=None) -> RadioCatalog:
+    """
+    Return the built-in bright source catalog.
+    If time is provided (astropy Time), the Sun's position is updated
+    to its actual RA/Dec at that time using astropy.coordinates.get_sun().
+    """
+    from astropy.coordinates import get_sun
+    from astropy.time import Time as ATime
+    import astropy.units as u
+
+    sources = list(BRIGHT_SOURCES)
+
+    t = time if time is not None else ATime.now()
+    sun_coord = get_sun(t)
+    for i, src in enumerate(sources):
+        if src.name == "Sun":
+            sources[i] = RadioSource(
+                name="Sun",
+                ra_deg=float(sun_coord.ra.deg),
+                dec_deg=float(sun_coord.dec.deg),
+                flux_jy=src.flux_jy,
+                ref_freq_mhz=src.ref_freq_mhz,
+                spectral_index=src.spectral_index,
+                source_type=src.source_type,
+                notes="Position computed for observation time",
+            )
+            break
+
+    return RadioCatalog("Bright Sources", sources)

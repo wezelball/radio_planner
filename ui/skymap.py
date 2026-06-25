@@ -260,25 +260,26 @@ class SkyMap:
                        s=style["size"] ** 2, alpha=marker_alpha,
                        zorder=4, edgecolors="none")
 
-            # Labels: always shown for all sources; dimmed text for below-horizon
-            text_alpha = (1.0 if above else 0.45) if show_visibility else 1.0
-            text_color = style["color"] if above or not show_visibility else "#888888"
+            # Labels: white text with colored border — readable over any background
+            text_alpha  = (1.0 if above else 0.40) if show_visibility else 1.0
+            border_color = style["color"] if above or not show_visibility else "#666666"
 
             ax.annotate(
                 src.name,
                 (src.ra_deg, src.dec_deg),
                 fontsize=9,
                 fontweight="bold",
-                color=text_color,
+                color="white",
                 xytext=(6, 4),
                 textcoords="offset points",
                 alpha=text_alpha,
                 zorder=6,
                 bbox=dict(
-                    boxstyle="round,pad=0.15",
+                    boxstyle="round,pad=0.20",
                     facecolor="black",
-                    edgecolor="none",
-                    alpha=0.55 * text_alpha,
+                    edgecolor=border_color,
+                    linewidth=0.8,
+                    alpha=0.70 * text_alpha,
                 ),
             )
 

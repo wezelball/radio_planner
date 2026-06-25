@@ -225,8 +225,9 @@ def main(argv=None) -> None:
         catalog = RadioCatalog.from_csv(args.catalog)
         print(f"Loaded catalog '{catalog.name}': {len(catalog)} sources")
     else:
-        catalog = default_catalog()
+        catalog = default_catalog(time=start_time)
         print(f"Using built-in bright source catalog: {len(catalog)} sources")
+        print(f"  Sun position computed for {start_time.iso[:16]} UTC")
 
     if args.min_flux > 0:
         catalog = catalog.by_flux_min(args.min_flux, site.frequency_mhz)
