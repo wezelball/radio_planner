@@ -1,0 +1,4 @@
+name,ra_deg,dec_deg,flux_jy,ref_freq_mhz,spectral_index,source_type,notes
+My HII Region,83.80,-5.40,45.0,1000,-0.1,hii region,Near Orion A
+Local SNR,120.50,28.30,12.0,1000,-0.7,supernova remnant,Faint extended source
+Background Galaxy,200.10,45.30,0.8,1400,-0.8,radio galaxy,Weak continuum
