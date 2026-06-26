@@ -32,8 +32,8 @@ Radio Planner generates an interactive sky map with a Global Sky Model backgroun
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/wezelball/radio-planner.git
-cd radio-planner
+git clone https://github.com/wezelball/radio_planner.git
+cd radio_planner
 ```
 
 ### 2. Create a virtual environment

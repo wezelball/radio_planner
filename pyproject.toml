@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.backends.legacy:build"
 
 [project]
-name = "radio-planner"
+name = "radio_planner"
 version = "0.1.0"
 description = "Radio astronomy observation planner for drift-scan telescopes"
 readme = "README.md"
@@ -50,11 +50,11 @@ dev = [
 ]
 
 [project.scripts]
-radio-planner = "main:main"
+radio_planner = "main:main"
 
 [project.urls]
-Homepage = "https://github.com/wezelball/radio-planner"
-"Bug Tracker" = "https://github.com/wezelball/radio-planner/issues"
+Homepage = "https://github.com/wezelball/radio_planner"
+"Bug Tracker" = "https://github.com/wezelball/radio_planner/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
