@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "radio-planner"
+version = "0.1.0"
+description = "Radio astronomy observation planner for drift-scan telescopes"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Wezel Ball" }
+]
+keywords = [
+    "radio astronomy",
+    "observation planning",
+    "drift scan",
+    "HI line",
+    "21cm",
+    "sky map",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "astropy>=6.0",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "pygdsm>=1.4.0",
+    "healpy>=1.16.0",
+]
+
+[project.optional-dependencies]
+online = [
+    "astroquery>=0.4.7",   # live NVSS/SIMBAD catalog queries
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+radio-planner = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/wezelball/radio-planner"
+"Bug Tracker" = "https://github.com/wezelball/radio-planner/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "ui*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
