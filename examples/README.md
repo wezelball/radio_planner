@@ -37,4 +37,4 @@ The map shows:
 - Galactic plane traced as a dotted curve
 - Observable declination band for your site (green dashed lines)
 
-![Sky Map](examples/skymap.png)
+![Sky Map](skymap.png)
