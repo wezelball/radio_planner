@@ -9,7 +9,7 @@ description = "Radio astronomy observation planner for drift-scan telescopes"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Wezel Ball" }
+    { name = "TwoMice Observatory" }
 ]
 keywords = [
     "radio astronomy",
