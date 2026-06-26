@@ -16,7 +16,7 @@ from astropy.time import Time
 import astropy.units as u
 
 from core.observer import ObserverSite
-from core.catalog import RadioSource, RadioCatalog
+from core.catalog import RadioSource
 from core.ephemeris import Ephemeris, VisibilityWindow
 
 

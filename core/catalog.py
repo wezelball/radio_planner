@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -193,20 +193,27 @@ def query_nvss(ra_deg: float, dec_deg: float, radius_deg: float = 1.0,
 # Default catalog singleton
 # ---------------------------------------------------------------------------
 
-def default_catalog(time=None) -> RadioCatalog:
+def default_catalog(time: Optional["Time"] = None) -> RadioCatalog:
     """
     Return the built-in bright source catalog.
-    If time is provided (astropy Time), the Sun's position is updated
-    to its actual RA/Dec at that time using astropy.coordinates.get_sun().
+
+    The Sun's position is computed for the given time (or now if omitted)
+    using astropy.coordinates.get_sun(), so it is always correctly placed
+    on the sky map regardless of the observation date.
+
+    Parameters
+    ----------
+    time : astropy.time.Time, optional
+        Observation time used to compute the Sun's RA/Dec.
+        Defaults to the current UTC time.
     """
     from astropy.coordinates import get_sun
-    from astropy.time import Time as ATime
-    import astropy.units as u
+    from astropy.time import Time as _Time
 
     sources = list(BRIGHT_SOURCES)
 
-    t = time if time is not None else ATime.now()
-    sun_coord = get_sun(t)
+    t = time if time is not None else _Time.now()
+    sun_coord = get_sun(t)  # returns GCRS SkyCoord
     for i, src in enumerate(sources):
         if src.name == "Sun":
             sources[i] = RadioSource(

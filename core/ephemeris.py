@@ -6,7 +6,6 @@ Rise, set, transit calculations and visibility window generation.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -129,6 +128,7 @@ class Ephemeris:
         return VisibilityWindow(source_name, rise_t, transit_t, set_t, peak_el)
 
     def is_visible_now(self, coord: SkyCoord, time: Optional[Time] = None) -> bool:
+        """Return True if the source is above the horizon limit at the given time."""
         t = time or Time.now()
         return self.site.is_visible(coord, t)
 
@@ -140,7 +140,7 @@ class Ephemeris:
 
     def multi_source_schedule(
         self,
-        sources: list,  # List[RadioSource]
+        sources: List,  # List[RadioSource]
         start_time: Time,
         duration_hours: float = 24.0,
     ) -> List[VisibilityWindow]:

@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 import sys
 import os
-from datetime import datetime, timezone
 
 # Ensure the project root is on sys.path so `core` and `ui` are importable
 # when running main.py directly (e.g. `python main.py` or `python3 main.py`)
@@ -27,7 +26,7 @@ from astropy.time import Time
 
 from core.observer import ObserverSite, KNOWN_SITES, now_utc
 from core.catalog import default_catalog, RadioCatalog
-from core.ephemeris import Ephemeris, DriftScanPredictor, BeamTransit
+from core.ephemeris import DriftScanPredictor
 from ui.skymap import SkyMap
 from ui.planner import ElevationPlot, ObservationSchedule, SensitivityCalculator
 

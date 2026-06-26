@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import numpy as np
-from astropy.coordinates import EarthLocation, AltAz, ICRS, SkyCoord, get_sun
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 from astropy.time import Time
 import astropy.units as u
 
@@ -86,12 +86,22 @@ KNOWN_SITES = {
     "parkes": ObserverSite("Parkes", -32.9983, 148.2635, 415),
     "arecibo": ObserverSite("Arecibo", 18.3464, -66.7528, 497),
     "effelsberg": ObserverSite("Effelsberg", 50.5247, 6.8828, 369),
-    "twomice": ObserverSite(name="TwoMice", latitude=37.7906, longitude=-77.9242, elevation=116, min_elevation=30.0, dish_diameter=0.7, system_temp_k=150.0),
     "custom": ObserverSite("Custom Site", 0.0, 0.0, 0),
+    "twomice": ObserverSite(
+    name="TwoMice",
+    latitude=37.7906,
+    longitude=-77.9242,
+    elevation=116,
+    min_elevation=30.0,
+    dish_diameter=0.7,
+    frequency_mhz=1420.0,
+    system_temp_k=150.0,
+    )
 }
 
 
 def get_site(name: str) -> ObserverSite:
+    """Look up a known observatory site by name (case-insensitive)."""
     key = name.lower().replace(" ", "_")
     if key not in KNOWN_SITES:
         raise ValueError(f"Unknown site '{name}'. Known: {list(KNOWN_SITES)}")
